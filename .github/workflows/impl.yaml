@@ -1,0 +1,26 @@
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if on test branch
+        if: github.ref != 'refs/heads/tests'
+        run: |
+          echo "Not on test branch, stopping job."
+          exit 1
+      
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: 'tests'
+              
+      - name: folderSnoop
+        run: |
+          echo "Checking for folders"
+          pwd
+          echo ${{ github.action_path }}
+          apt-get update
+          apt-get install -y tree
+          tree
