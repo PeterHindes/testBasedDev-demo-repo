@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -16,6 +17,9 @@ func runTests(dir string) (string, error) {
 		return "", fmt.Errorf("failed to get current directory: %v", err)
 	}
 
+	// Ensure we change back to original directory
+	defer os.Chdir(currentDir)
+
 	// Change to target directory
 	if err := os.Chdir(dir); err != nil {
 		return "", fmt.Errorf("failed to change directory: %v", err)
@@ -29,9 +33,6 @@ func runTests(dir string) (string, error) {
 		return string(output), nil
 	}
 
-	// Ensure we change back to original directory
-	defer os.Chdir(currentDir)
-
 	return string(output), nil
 }
 
@@ -42,6 +43,9 @@ func runProgram(dir string) (string, error) {
 		return "", fmt.Errorf("failed to get current directory: %v", err)
 	}
 
+	// Ensure we change back to original directory
+	defer os.Chdir(currentDir)
+
 	// Change to target directory
 	if err := os.Chdir(dir); err != nil {
 		return "", fmt.Errorf("failed to change directory: %v", err)
@@ -49,15 +53,28 @@ func runProgram(dir string) (string, error) {
 
 	// Run the program and capture output
 	cmd := exec.Command("go", "run", "main.go")
-	output, err := cmd.CombinedOutput()
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", fmt.Errorf("failed to run program: %v", err)
+		return "", fmt.Errorf("failed to create stdout pipe: %v", err)
+	}
+	
+	// Stream output to console while its running
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			fmt.Println(scanner.Text())
+		}
+	}()
+
+	if err := cmd.Start(); err != nil {
+		return "", fmt.Errorf("failed to start command: %v", err)
 	}
 
-	// Ensure we change back to original directory
-	defer os.Chdir(currentDir)
+	if err := cmd.Wait(); err != nil {
+		return "", fmt.Errorf("command failed: %v", err)
+	}
 
-	return string(output), nil
+	return "", nil
 }
 
 func main() {
@@ -77,14 +94,14 @@ func main() {
 	done := make(chan bool)
 	go func() {
 		defer close(done)
-		output, err := runProgram(targetDir+"/verified")
+		_, err := runProgram(targetDir+"/verified")
 		if err != nil {
 			fmt.Printf("Error running program: %v\n", err)
 			return
 		}
-		// return output
-		var _ = output
+		// fmt.Println(output)
 	}()
+
 
 
 	// Run tests and get output
