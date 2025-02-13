@@ -1,2 +1,8 @@
 # The tests branch
 Theses are the tests that get run by our action
+```go
+go test
+```
+hits the localhost:8000 endpoint.
+
+This test expects an implemented todo triage system.
