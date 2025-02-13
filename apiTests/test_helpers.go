@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const baseURL = "http://localhost:9090"
+const baseURL = "http://localhost:8000"
 
 // Response represents an HTTP response structure
 type Response struct {
@@ -153,4 +153,9 @@ func getSystemStats() (SystemStats, error) {
 		return SystemStats{}, err
 	}
 	return response.SystemStats, nil
+}
+
+// resetDatabase clears all data from the tasks table
+func resetDatabase() (Response, error) {
+	return makeRequest("DELETE", "/reset?confirm=true", nil)
 }
