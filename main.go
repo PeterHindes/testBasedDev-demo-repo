@@ -4,9 +4,36 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 
 	openai "github.com/sashabaranov/go-openai"
 )
+
+func runTests(dir string) (string, error) {
+	// Save current directory
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current directory: %v", err)
+	}
+
+	// Change to target directory
+	if err := os.Chdir(dir); err != nil {
+		return "", fmt.Errorf("failed to change directory: %v", err)
+	}
+
+	// Run go test and capture output
+	cmd := exec.Command("go", "test")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// Don't return error as we want to send test failures to AI
+		return string(output), nil
+	}
+
+	// Ensure we change back to original directory
+	defer os.Chdir(currentDir)
+
+	return string(output), nil
+}
 
 func main() {
 	// Get API key from environment variable
@@ -16,12 +43,25 @@ func main() {
 		return
 	}
 
+	// Get target directory from args or use current directory
+	targetDir := os.Getenv("HOLDING_PATH")
+
+	// Run tests and get output
+	testOutput, err := runTests(targetDir+"/tests")
+	if err != nil {
+		fmt.Printf("Error running tests: %v\n", err)
+		return
+	}
+
 	// Create configuration with custom base URL
 	config := openai.DefaultConfig(apiKey)
 	config.BaseURL = "https://generativelanguage.googleapis.com/v1beta/openai/"
-	
+
 	// Create a new client with config
 	client := openai.NewClientWithConfig(config)
+
+	// Create message content with test output
+	messageContent := fmt.Sprintf("Here are the test results from my Go project:\n\n%s\n\nPlease analyze these test results and provide insights.", testOutput)
 
 	// Create a completion request
 	resp, err := client.CreateChatCompletion(
@@ -31,11 +71,11 @@ func main() {
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleSystem,
-					Content: "You are a unhelpful assistant.",
+					Content: "You are a helpful assistant that analyzes test results and provides insights.",
 				},
 				{
 					Role:    openai.ChatMessageRoleUser,
-					Content: "Hello, how are you? I would like to book a hotel.",
+					Content: messageContent,
 				},
 			},
 		},

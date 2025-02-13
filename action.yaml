@@ -36,19 +36,19 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
 
-    - name: Install Dependencies
-      run: pip install -r ${{ github.action_path }}/requirements.txt
+    - name: CD to holding path
+      run: cd ${{ github.action_path }}
+      shell: bash
+    
+    - name: Install Dependencies From go.mod
+      run: go mod download
       shell: bash
 
     - name: Run OpenAI code review
       id: openai
       run: |
-        python ${{ github.action_path }}/smarts.py
+        go run main.go
       shell: bash
       env:
         OPENAI_API_KEY: ${{ inputs.openai-key }}
