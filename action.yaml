@@ -1,0 +1,98 @@
+# action.yaml
+name: 'LLM Code Agent'
+author: Peter Hindes (@PeterHindes)
+description: 'A Github Action that posts code review from OpenAI to pull request'
+inputs:
+  github-token:
+    description: 'The token used to authenticate with the GitHub API'
+    required: false
+    default: ${{ github.token }}
+  model:
+    description: 'The OpenAI language model to use for code review'
+    required: false
+    default: 'gpt-3.5-turbo'
+  openai-key:
+    description: 'The OpenAI API key'
+    required: true
+  openai-baseurl:
+    description: 'The base_url for the openai api'
+    required: false
+    default: 'https://api.openai.com/'
+  prompt:
+    description: 'The prompt to use for the analysis.'
+    required: True
+  file-types:
+    description: 'The file types to include in the prompt'
+    required: true
+  holding-path:
+    description: 'The path to the holding folder containing the tests and current code'
+    required: true
+
+outputs:
+  results:
+    description: 'The results of the code review'
+    value: ${{ steps.openai.outputs.reviewresult }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Dependencies
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+      shell: bash
+
+    - name: Run OpenAI code review
+      id: openai
+      run: |
+        python ${{ github.action_path }}/analyze_code_changes.py
+      shell: bash
+      env:
+        OPENAI_API_KEY: ${{ inputs.openai-key }}
+        OPENAI_API_BASEURL: ${{ inputs.openai-baseurl }}
+        MODEL: ${{ inputs.model }}
+        PROMPT: ${{ inputs.prompt }}
+        FILE_TYPES: ${{ inputs.file-types }}
+        HOLDING_PATH: ${{ inputs.holding-path }}
+
+    - name: Show output in case of failure
+      id: err-output
+      if: failure()
+      run: |
+        echo 'errorresult<<EOF' >> $GITHUB_OUTPUT
+        echo "ERROR: $(cat review.txt)" >> $GITHUB_OUTPUT
+        echo 'EOF' >> $GITHUB_OUTPUT
+        echo "Review result and error: $(cat review.txt)"
+      shell: bash
+    
+    - name: Debug Output
+      run: cat review.txt
+      shell: bash
+
+
+    - name: Checkout target branch
+      uses: actions/checkout@v4
+      with:
+        ref: results
+        fetch-depth: 0
+
+    - name: Save review result to file
+      if: success()
+      run: |
+        echo "Review result: ${{ steps.openai.outputs.reviewresult }}"
+        echo "${{ steps.openai.outputs.result }}" > review_result.txt
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add review_result.txt
+        git commit -m "Add code review result"
+        git push origin results
+      shell: bash
+      env:
+        token: ${{ inputs.GITHUB_TOKEN }}
+
+branding:
+  icon: 'user-check'
+  color: 'green'

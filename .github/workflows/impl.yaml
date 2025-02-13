@@ -1,0 +1,65 @@
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if on test branch
+        if: github.ref != 'refs/heads/tests'
+        run: |
+          echo "Not on test branch, stopping job."
+          exit 1
+      
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: 'verified'
+
+      - name: Create Holding Folder
+        run: |
+          mkdir -p ../holding/verified
+          mkdir -p ../holding/tests
+          echo "Created holding folder"
+      
+      - name: Copy Files
+        run: |
+          cp -r . ../holding/verified
+          echo "Copied files to holding folder"
+
+      - name: Checkout 2
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: 'tests'
+      
+      - name: Copy Files 2
+        run: |
+          cp -r . ../holding/tests
+          echo "Copied files to holding folder"
+
+      - name: Checkout 3
+        uses: actions/checkout@v4
+        with:
+          ref: 'generated'
+      
+      - uses: ../llm-test-to-code
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # openai-key: ${{ secrets.OPENAI_API_KEY }}
+          openai-baseurl: 'http://localhost:11454/v1'
+          # model: 'qwen2.5-72b-instruct'
+          openai-key: 'sk-1234'
+          prompt: "Return any files that need to be changed to make the test case pass."
+          file-types: 'py,go'
+          holding-path: '../holding'
+
+      # - name: folderSnoop
+      #   shell: bash
+      #   run: |
+      #     echo "Checking for folders"
+      #     pwd
+      #     echo ${{ github.action_path }}
+      #     apt-get update
+      #     apt-get install -y tree
+      #     tree ../
