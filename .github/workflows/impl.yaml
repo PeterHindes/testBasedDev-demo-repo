@@ -53,6 +53,7 @@ jobs:
           echo "Checking for folders"
           apt-get update
           apt-get install -y tree
+          pwd
           tree ../
       
       - name: Ask LLM
