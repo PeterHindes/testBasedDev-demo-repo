@@ -56,6 +56,7 @@ jobs:
       #     tree ../
       
       - name: Ask LLM
+        id: openai
         uses: ./
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -66,6 +67,11 @@ jobs:
           prompt: "Return any files that need to be changed to make the test case pass."
           file-types: 'py,go'
           holding-path: '../holding'
+
+      - name: Debug Output
+        run: |
+          echo "Review result: ${{ steps.openai.outputs.response }}"
+        shell: bash
 
       # - name: Checkout 4
       #   uses: actions/checkout@v4

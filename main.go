@@ -35,6 +35,31 @@ func runTests(dir string) (string, error) {
 	return string(output), nil
 }
 
+func runProgram(dir string) (string, error) {
+	// Save current directory
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current directory: %v", err)
+	}
+
+	// Change to target directory
+	if err := os.Chdir(dir); err != nil {
+		return "", fmt.Errorf("failed to change directory: %v", err)
+	}
+
+	// Run the program and capture output
+	cmd := exec.Command("go", "run", "main.go")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to run program: %v", err)
+	}
+
+	// Ensure we change back to original directory
+	defer os.Chdir(currentDir)
+
+	return string(output), nil
+}
+
 func main() {
 	// Get API key from environment variable
 	apiKey := os.Getenv("GEMINI_API_KEY")
@@ -46,12 +71,31 @@ func main() {
 	// Get target directory from args or use current directory
 	targetDir := os.Getenv("HOLDING_PATH")
 
+	// Start the program
+	fmt.Println("Starting program...")
+	// Create a channel to signal goroutine completion
+	done := make(chan bool)
+	go func() {
+		defer close(done)
+		output, err := runProgram(targetDir+"/verified")
+		if err != nil {
+			fmt.Printf("Error running program: %v\n", err)
+			return
+		}
+		// return output
+		var _ = output
+	}()
+
+
 	// Run tests and get output
 	testOutput, err := runTests(targetDir+"/tests")
 	if err != nil {
 		fmt.Printf("Error running tests: %v\n", err)
 		return
 	}
+
+	// Kill the program after tests are done
+	<-done
 
 	// Create configuration with custom base URL
 	config := openai.DefaultConfig(apiKey)
@@ -62,6 +106,10 @@ func main() {
 
 	// Create message content with test output
 	messageContent := fmt.Sprintf("Here are the test results from my Go project:\n\n%s\n\nPlease analyze these test results and provide insights.", testOutput)
+
+	fmt.Println("Sending message to AI...")
+	// then print it in teal
+	fmt.Println("\033[36m", messageContent, "\033[0m")
 
 	// Create a completion request
 	resp, err := client.CreateChatCompletion(
@@ -88,4 +136,11 @@ func main() {
 
 	// Print the response
 	fmt.Println(resp.Choices[0].Message.Content)
+
+	// Save the response to a file
+	_, err = os.Create("response.txt")
+	if err != nil {
+		fmt.Printf("Error creating response file: %v\n", err)
+		return
+	}
 }

@@ -51,8 +51,9 @@ runs:
     - name: Run OpenAI code review
       id: openai
       run: |
+        go run main.go
         echo 'response<<EOF' >> $GITHUB_OUTPUT
-        go run main.go >> $GITHUB_OUTPUT
+        cat response.txt >> $GITHUB_OUTPUT
         echo 'EOF' >> $GITHUB_OUTPUT
       shell: bash
       env:
