@@ -40,6 +40,11 @@ runs:
     - name: CD to holding path
       run: cd ${{ github.action_path }}
       shell: bash
+
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+      shell: bash
     
     - name: Install Dependencies From go.mod
       run: go mod download
@@ -58,40 +63,40 @@ runs:
         FILE_TYPES: ${{ inputs.file-types }}
         HOLDING_PATH: ${{ inputs.holding-path }}
 
-    - name: Show output in case of failure
-      id: err-output
-      if: failure()
-      run: |
-        echo 'errorresult<<EOF' >> $GITHUB_OUTPUT
-        echo "ERROR: $(cat review.txt)" >> $GITHUB_OUTPUT
-        echo 'EOF' >> $GITHUB_OUTPUT
-        echo "Review result and error: $(cat review.txt)"
-      shell: bash
+    # - name: Show output in case of failure
+    #   id: err-output
+    #   if: failure()
+    #   run: |
+    #     echo 'errorresult<<EOF' >> $GITHUB_OUTPUT
+    #     echo "ERROR: $(cat review.txt)" >> $GITHUB_OUTPUT
+    #     echo 'EOF' >> $GITHUB_OUTPUT
+    #     echo "Review result and error: $(cat review.txt)"
+    #   shell: bash
     
-    - name: Debug Output
-      run: cat review.txt
-      shell: bash
+    # - name: Debug Output
+    #   run: cat review.txt
+    #   shell: bash
 
 
-    - name: Checkout target branch
-      uses: actions/checkout@v4
-      with:
-        ref: results
-        fetch-depth: 0
+    # - name: Checkout target branch
+    #   uses: actions/checkout@v4
+    #   with:
+    #     ref: results
+    #     fetch-depth: 0
 
-    - name: Save review result to file
-      if: success()
-      run: |
-        echo "Review result: ${{ steps.openai.outputs.reviewresult }}"
-        echo "${{ steps.openai.outputs.result }}" > review_result.txt
-        git config --global user.name 'github-actions[bot]'
-        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-        git add review_result.txt
-        git commit -m "Add code review result"
-        git push origin results
-      shell: bash
-      env:
-        token: ${{ inputs.GITHUB_TOKEN }}
+    # - name: Save review result to file
+    #   if: success()
+    #   run: |
+    #     echo "Review result: ${{ steps.openai.outputs.reviewresult }}"
+    #     echo "${{ steps.openai.outputs.result }}" > review_result.txt
+    #     git config --global user.name 'github-actions[bot]'
+    #     git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+    #     git add review_result.txt
+    #     git commit -m "Add code review result"
+    #     git push origin results
+    #   shell: bash
+    #   env:
+    #     token: ${{ inputs.GITHUB_TOKEN }}
 
 branding:
   icon: 'user-check'
