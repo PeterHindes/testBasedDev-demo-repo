@@ -1,5 +1,0 @@
-openai
-# github
-requests
-pytest
-pytest-mock
