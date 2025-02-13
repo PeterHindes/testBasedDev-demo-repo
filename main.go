@@ -130,6 +130,8 @@ func main() {
 		return
 	}
 
+	fmt.Println("Test Done")
+
 	// Kill the program after tests are done
 	<-done
 
