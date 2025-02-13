@@ -85,7 +85,7 @@ func runProgram(dir string) (string, error) {
 	}
 
 	// Check pwd again
-	pwd, err := os.Getwd()
+	pwd, err = os.Getwd()
 	if err != nil {
 		fmt.Println("Error getting current directory: ", err)
 		return "", err
