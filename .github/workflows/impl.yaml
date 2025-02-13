@@ -47,13 +47,13 @@ jobs:
           ref: 'action'
       
       
-      - name: folderSnoop
-        shell: bash
-        run: |
-          echo "Checking for folders"
-          apt-get update
-          apt-get install -y tree
-          tree ../
+      # - name: folderSnoop
+      #   shell: bash
+      #   run: |
+      #     echo "Checking for folders"
+      #     apt-get update
+      #     apt-get install -y tree
+      #     tree ../
       
       - name: Ask LLM
         uses: ./
