@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"time"
 
 	openai "github.com/sashabaranov/go-openai"
 )
