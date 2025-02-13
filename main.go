@@ -133,7 +133,7 @@ func main() {
 	fmt.Println("Test Done")
 
 	// Kill the program after tests are done
-	<-done
+	// <-done
 
 	// Create configuration with custom base URL
 	config := openai.DefaultConfig(apiKey)
