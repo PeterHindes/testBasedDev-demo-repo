@@ -43,12 +43,12 @@ type TaskAnalytics struct {
 	DaysUntilDue        int      `json:"days_until_due"`
 	CompletionHealth    string   `json:"completion_health"`
 	PercentageComplete  float64  `json:"percentage_complete"`
-	TimeToCompleteHours *float64 `json:"time_to_complete_hours,omitempty"`
+	TimeToCompleteHours float64 `json:"time_to_complete_hours,omitempty"`
 }
 
 // SystemStats represents system-wide statistics
 type SystemStats struct {
-	AvgCompletionHours *float64    `json:"avg_completion_hours,omitempty"`
+	AvgCompletionHours float64    `json:"avg_completion_hours,omitempty"`
 	CompletionRate     float64     `json:"completion_rate"`
 	TasksByPriority    map[int]int `json:"tasks_by_priority"`
 }
@@ -121,6 +121,14 @@ func createTask(name string, start, due time.Time, priority int) string {
 
 func completeTask(taskID string) Response {
 	resp, err := makeRequest("PUT", fmt.Sprintf("/tasks/%s/complete", taskID), nil)
+	if err != nil {
+		return Response{StatusCode: 500}
+	}
+	return resp
+}
+
+func uncompleteTask(taskID string) Response {
+	resp, err := makeRequest("PUT", fmt.Sprintf("/tasks/%s/uncomplete", taskID), nil)
 	if err != nil {
 		return Response{StatusCode: 500}
 	}
