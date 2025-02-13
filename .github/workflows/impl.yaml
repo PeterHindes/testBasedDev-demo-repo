@@ -13,7 +13,6 @@ jobs:
       #   run: |
       #     echo "Not on test branch, stopping job."
       #     exit 1
-      
       - name: Checkout
         uses: actions/checkout@v4
         with:

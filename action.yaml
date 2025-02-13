@@ -48,7 +48,7 @@ runs:
     - name: Run OpenAI code review
       id: openai
       run: |
-        python ${{ github.action_path }}/analyze_code_changes.py
+        python ${{ github.action_path }}/smarts.py
       shell: bash
       env:
         OPENAI_API_KEY: ${{ inputs.openai-key }}
