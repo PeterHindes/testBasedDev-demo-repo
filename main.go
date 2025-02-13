@@ -99,12 +99,12 @@ func main() {
 	targetDir := os.Getenv("HOLDING_PATH")
 
 	// Print pwd to see if we are in the right directory
-	pwd, err := os.Getwd()
+	basedir, err := os.Getwd()
 	if err != nil {
 		fmt.Println("Error getting current directory: ", err)
 		return
 	}
-	fmt.Println("Current directory: ", pwd)
+	fmt.Println("Current directory: ", basedir)
 
 	// Start the program
 	fmt.Println("Starting program...")
@@ -112,7 +112,7 @@ func main() {
 	done := make(chan bool)
 	go func() {
 		defer close(done)
-		_, err := runProgram(targetDir+"/verified")
+		_, err := runProgram(basedir+targetDir+"/verified")
 		if err != nil {
 			fmt.Printf("Error running program: %v\n", err)
 			return
@@ -120,13 +120,8 @@ func main() {
 		// fmt.Println(output)
 	}()
 
-	// wait for a few seconds
-	time.Sleep(5 * time.Second)
-
-
-
 	// Run tests and get output
-	testOutput, err := runTests(targetDir+"/tests")
+	testOutput, err := runTests(basedir+targetDir+"/tests")
 	if err != nil {
 		fmt.Printf("Error running tests: %v\n", err)
 		return
