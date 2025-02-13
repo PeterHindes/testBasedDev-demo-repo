@@ -88,6 +88,14 @@ func main() {
 	// Get target directory from args or use current directory
 	targetDir := os.Getenv("HOLDING_PATH")
 
+	// Print pwd to see if we are in the right directory
+	pwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current directory: ", err)
+		return
+	}
+	fmt.Println("Current directory: ", pwd)
+
 	// Start the program
 	fmt.Println("Starting program...")
 	// Create a channel to signal goroutine completion
