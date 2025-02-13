@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f6fa;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        form {
+            display: grid;
+            gap: 10px;
+        }
+
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .task-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .task-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .priority {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            text-align: center;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task Manager</h1>
+    
+    <div class="grid">
+        <!-- Create Task Form -->
+        <div class="card">
+            <h2>Create New Task</h2>
+            <form id="createTaskForm">
+                <input type="text" name="name" placeholder="Task name" required>
+                <input type="datetime-local" name="start_date" required>
+                <input type="datetime-local" name="due_date" required>
+                <select name="priority" required>
+                    <option value="1">Priority 1</option>
+                    <option value="2">Priority 2</option>
+                    <option value="3">Priority 3</option>
+                    <option value="4">Priority 4</option>
+                    <option value="5">Priority 5</option>
+                </select>
+                <button type="submit">Create Task</button>
+            </form>
+        </div>
+
+        <!-- Task List -->
+        <div class="card">
+            <h2>Tasks</h2>
+            <ul class="task-list" id="taskList"></ul>
+        </div>
+
+        <!-- Analytics -->
+        <div class="card">
+            <h2>System Analytics</h2>
+            <canvas id="priorityChart"></canvas>
+            <canvas id="completionChart"></canvas>
+            <p>Average Completion Time: <span id="avgCompletionText"></span></p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let priorityChart, completionChart;
+
+        // Create Task
+        document.getElementById('createTaskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            try {
+                const response = await fetch(`${API_BASE}/tasks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: formData.get('name'),
+                        start_date: new Date(formData.get('start_date')).toISOString(),
+                        due_date: new Date(formData.get('due_date')).toISOString(),
+                        priority: parseInt(formData.get('priority'))
+                    })
+                });
+
+                if (!response.ok) throw new Error(await response.text());
+                loadTasks();
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        });
+
+        // Load and Display Tasks
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_BASE}/tasks`);
+                const tasks = await response.json();
+                // console.log(tasks.tasks);
+                
+                const taskList = document.getElementById('taskList');
+                // Sort tasks array by status (completed tasks at the bottom)
+                // tasks.tasks.sort((a, b) => a.status === 'completed' ? 1 : -1); This didnt work
+                let completedTasks = tasks.tasks.filter(task => task.status === 'completed');
+                let uncompletedTasks = tasks.tasks.filter(task => task.status !== 'completed');
+                taskList.innerHTML = uncompletedTasks.map(task => `
+                    <li class="task-item">
+                        <div>
+                            <h3>${task.name}</h3>
+                            <small>${new Date(task.due_date).toLocaleDateString()}</small>
+                            <div class="priority" style="background: ${getPriorityColor(task.priority)}">
+                                ${task.priority}
+                            </div>
+                        </div>
+                        <button onclick="completeTask('${task.id}')">Mark Complete</button>
+                    </li>
+                `).join('') 
+                +
+                completedTasks.map(task => `
+                    <li class="task-item">
+                        <div>
+                            <h3>${task.name}</h3>
+                            <small>${new Date(task.due_date).toLocaleDateString()}</small>
+                            <div class="priority" style="background: ${getPriorityColor(task.priority)}">
+                                ${task.priority}
+                            </div>
+                        </div>
+                        <button onclick="uncompleteTask('${task.id}')">✅ Completed</button>
+                    </li>
+                `).join('');
+                
+                loadAnalytics();
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            }
+        }
+
+        // Complete Task
+        async function completeTask(taskId) {
+            try {
+                const response = await fetch(`${API_BASE}/tasks/${taskId}/complete`, {
+                    method: 'PUT'
+                });
+                
+                if (!response.ok) throw new Error('Failed to complete task');
+                loadTasks();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // Uncomplete Task
+        async function uncompleteTask(taskId) {
+            try {
+            const response = await fetch(`${API_BASE}/tasks/${taskId}/uncomplete`, {
+                method: 'PUT'
+            });
+            
+            if (!response.ok) throw new Error('Failed to uncomplete task');
+            loadTasks();
+            } catch (error) {
+            alert(error.message);
+            }
+        }
+
+        // Add a function to format hours nicely
+        function formatHours(hours) {
+            // Keep up to two decimal places and roll over on days
+            const days = Math.floor(hours / 24);
+            const remainingHours = (hours % 24).toFixed(2);
+            if (days > 0) return `${days} days, ${remainingHours} hours`;
+            return `${remainingHours} hours`;
+        }
+
+        // Update loadAnalytics to show average completion time
+        async function loadAnalytics() {
+            try {
+                const statsResponse = await fetch(`${API_BASE}/analytics`);
+                const { system_stats } = await statsResponse.json();
+                
+                // Add average completion time display
+                const avgCompletionTime = system_stats.avg_completion_hours 
+                    ? formatHours(system_stats.avg_completion_hours)
+                    : 'No completed tasks';
+                
+                document.getElementById('avgCompletionText').innerHTML = avgCompletionTime;
+
+                // Rest of the analytics code...
+                // Priority Distribution Chart
+                const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+                const priorities = Object.entries(system_stats.tasks_by_priority);
+                
+                if (priorityChart) priorityChart.destroy();
+                priorityChart = new Chart(priorityCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: priorities.map(([p]) => `Priority ${p}`),
+                        datasets: [{
+                            data: priorities.map(([, count]) => count),
+                            backgroundColor: priorities.map(([p]) => getPriorityColor(p))
+                        }]
+                    }
+                });
+
+                // Completion Rate Chart
+                const completionCtx = document.getElementById('completionChart').getContext('2d');
+                if (completionChart) completionChart.destroy();
+                completionChart = new Chart(completionCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Completed', 'Remaining'],
+                        datasets: [{
+                            data: [system_stats.completion_rate, 100 - system_stats.completion_rate],
+                            backgroundColor: ['#2ecc71', '#e74c3c']
+                        }]
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+
+        // Helper function
+        function getPriorityColor(priority) {
+            const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db'];
+            return colors[priority - 1] || '#95a5a6';
+        }
+
+        // Initial load
+        loadTasks();
+    </script>
+</body>
+</html>

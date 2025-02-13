@@ -2,17 +2,20 @@
 package main
 
 import (
-	_ "bytes"
+	"bytes"
+	"io"
 	"crypto/rand"
 	"database/sql"
 	"fmt"
-	_ "io"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "modernc.org/sqlite"
 )
+
+// force io and bytes to be imported
+var _, _ = io.ByteReader(nil), bytes.Buffer{}
 
 type Task struct {
 	ID             string    `json:"id"`
@@ -57,9 +60,16 @@ func main() {
 	r.POST("/tasks", createTask)
 	r.GET("/tasks", listTasks)
 	r.PUT("/tasks/:id/complete", completeTask)
+	r.PUT("/tasks/:id/uncomplete", uncompleteTask)
 	r.GET("/tasks/:id/analytics", getAnalytics)
 	r.GET("/analytics", getSystemAnalytics)
 	r.DELETE("/tasks/old", deleteOldTasks)
+
+	// Serve the frontend
+	r.GET("/", func(c *gin.Context) {
+		c.File("index.html")
+	})
+
 
 	r.Run(":8000")
 }
@@ -107,7 +117,9 @@ func createTask(c *gin.Context) {
 		Priority  int       `json:"priority" binding:"required,min=1,max=5"`
 	}
 
-	// Debug incoming request
+	var err error
+
+	// // Debug incoming request
 	// bodyBytes, err := c.GetRawData()
 	// if err != nil {
 	// 	fmt.Printf("Error reading body: %v\n", err)
@@ -136,7 +148,7 @@ func createTask(c *gin.Context) {
 	}
 
 	id := generateUUID()
-	_, err := db.Exec(`INSERT INTO tasks 
+	_, err = db.Exec(`INSERT INTO tasks 
 		(id, name, start_date, due_date, priority, status) 
 		VALUES (?, ?, ?, ?, ?, 'pending')`,
 		id, task.Name, task.StartDate, task.DueDate, task.Priority)
@@ -187,6 +199,26 @@ func completeTask(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "completed"})
+}
+
+func uncompleteTask(c *gin.Context) {
+	id := c.Param("id")
+	result, err := db.Exec(`UPDATE tasks 
+		SET status = 'pending', completed_at = NULL 
+		WHERE id = ?`, id)
+	
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "pending"})
 }
 
 func getAnalytics(c *gin.Context) {
@@ -261,7 +293,6 @@ func getSystemAnalytics(c *gin.Context) {
 		FROM tasks WHERE status = 'completed'`)
 	defer completedRows.Close()
 	
-	fmt.Println("Completed tasks:")
 	var avgHours float64 = 0;
 	var numEntries int = 0;
 	for completedRows.Next() {
