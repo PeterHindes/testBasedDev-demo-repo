@@ -39,13 +39,13 @@ func runTests(dir string) (string, error) {
 
 func runProgram(dir string) (string, error) {
 
-	// // Check pwd again
-	// pwd, err := os.Getwd()
-	// if err != nil {
-	// 	fmt.Println("Error getting current directory: ", err)
-	// 	return "", err
-	// }
-	// fmt.Println("Current directory: ", pwd)
+	// Check pwd again
+	pwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current directory: ", err)
+		return "", err
+	}
+	fmt.Println("Current directory: ", pwd)
 
 	// Save current directory
 	currentDir, err := os.Getwd()
@@ -83,6 +83,14 @@ func runProgram(dir string) (string, error) {
 	if err := cmd.Wait(); err != nil {
 		return "", fmt.Errorf("command failed: %v", err)
 	}
+
+	// Check pwd again
+	pwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current directory: ", err)
+		return "", err
+	}
+	fmt.Println("Current directory: ", pwd)
 
 	return "", nil
 }
