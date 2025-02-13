@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -118,6 +119,9 @@ func main() {
 		}
 		// fmt.Println(output)
 	}()
+
+	// wait for a few seconds
+	time.Sleep(5 * time.Second)
 
 
 
