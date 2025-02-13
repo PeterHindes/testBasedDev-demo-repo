@@ -3,17 +3,21 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # pull-requests: write
     steps:
-      - name: Check if on test branch
-        if: github.ref != 'refs/heads/tests'
-        run: |
-          echo "Not on test branch, stopping job."
-          exit 1
+      # Commented out for debugging on local
+      # - name: Check if on test branch
+      #   if: github.ref != 'refs/heads/tests'
+      #   run: |
+      #     echo "Not on test branch, stopping job."
+      #     exit 1
       
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           ref: 'verified'
 
       - name: Create Holding Folder
@@ -41,9 +45,19 @@ jobs:
       - name: Checkout 3
         uses: actions/checkout@v4
         with:
-          ref: 'generated'
+          ref: 'action'
       
-      - uses: ../llm-test-to-code
+      
+      - name: folderSnoop
+        shell: bash
+        run: |
+          echo "Checking for folders"
+          apt-get update
+          apt-get install -y tree
+          tree ../
+      
+      - name: Ask LLM
+        uses: ./
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # openai-key: ${{ secrets.OPENAI_API_KEY }}
@@ -54,12 +68,22 @@ jobs:
           file-types: 'py,go'
           holding-path: '../holding'
 
-      # - name: folderSnoop
-      #   shell: bash
+      # - name: Checkout 4
+      #   uses: actions/checkout@v4
+      #   with:
+      #     ref: 'generated'
+      
+      # - name: Copy new files
       #   run: |
-      #     echo "Checking for folders"
-      #     pwd
-      #     echo ${{ github.action_path }}
-      #     apt-get update
-      #     apt-get install -y tree
-      #     tree ../
+      #     cp -r ../holding/new/. .
+      #     echo "Copied files to verified folder"
+      
+      # - name: Commit and push
+      #   run: |
+      #     git config --global user.email "bot@noreply.abad.cc"
+      #     git config --global user.name "bot"
+      #     git add .
+      #     git commit -m "Automated changes"
+      #     git push origin generated
+
+
