@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -38,13 +39,13 @@ func runTests(dir string) (string, error) {
 
 func runProgram(dir string) (string, error) {
 
-	// Check pwd again
-	pwd, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Error getting current directory: ", err)
-		return "", err
-	}
-	fmt.Println("Current directory: ", pwd)
+	// // Check pwd again
+	// pwd, err := os.Getwd()
+	// if err != nil {
+	// 	fmt.Println("Error getting current directory: ", err)
+	// 	return "", err
+	// }
+	// fmt.Println("Current directory: ", pwd)
 
 	// Save current directory
 	currentDir, err := os.Getwd()
@@ -110,17 +111,20 @@ func main() {
 	// Create a channel to signal goroutine completion
 	done := make(chan bool)
 	go func() {
+		// Lock this goroutine to an OS thread
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
 		defer close(done)
-		_, err := runProgram(basedir+targetDir+"/verified")
+		
+		_, err := runProgram(basedir+"/"+targetDir+"/verified")
 		if err != nil {
 			fmt.Printf("Error running program: %v\n", err)
 			return
 		}
-		// fmt.Println(output)
 	}()
 
 	// Run tests and get output
-	testOutput, err := runTests(basedir+targetDir+"/tests")
+	testOutput, err := runTests(basedir+"/"+targetDir+"/tests")
 	if err != nil {
 		fmt.Printf("Error running tests: %v\n", err)
 		return
