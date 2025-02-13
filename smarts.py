@@ -53,7 +53,7 @@ if __name__ == "__main__":
     # get the path of the git repo from the env
     path = os.getenv("HOLDING_PATH")
     # run the tests
-    exit_code = pytest.main(["--tb=short", "--disable-warnings", path])
+    exit_code = pytest.main(["--tb=short", "--disable-warnings", "-v", path+"/tests"])
     output = sys.stdout.getvalue()
     
     print(output)
